@@ -4,7 +4,7 @@ using MediatR.Extensions.Autofac.DependencyInjection;
 using Microservices.Core.Domain.Behaviors;
 using System.Reflection;
 
-namespace Identity.API.AutofacModules
+namespace Identity.API.Infrastructures.AutofacModules
 {
     public class MediatorModule : Autofac.Module
     {

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
 
-namespace Identity.API.AutofacModules
+namespace Identity.API.Infrastructures.AutofacModules
 {
     public class ApplicationModule : Autofac.Module
     {
@@ -31,7 +31,7 @@ namespace Identity.API.AutofacModules
                .AsClosedTypesOf(typeof(IIntegrationEventHandler<>))
                .InstancePerLifetimeScope();
 
-            builder.Register<DbContextCore>(context =>
+            builder.Register(context =>
             {
                 var mediator = context.Resolve<IMediator>();
                 var configuration = context.Resolve<IConfiguration>();

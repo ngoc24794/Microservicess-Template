@@ -31,6 +31,7 @@
 		<Folder Include="Application\Queries\Models\" />
 		<Folder Include="Application\Queries\Services\" />
 		<Folder Include="Controllers\" />
+		<Folder Include="Models\" />
 	</ItemGroup>
 
 	<ItemGroup>
