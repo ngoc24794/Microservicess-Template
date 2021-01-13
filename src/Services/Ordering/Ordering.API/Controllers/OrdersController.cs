@@ -26,7 +26,7 @@ namespace Ordering.API.Controllers
 
         #region Public Constructors
 
-        public OrdersController(IOrderQueries orderQueries, ILogger<OrdersController> logger, IMediator mediator)
+        public OrdersController(IOrderQueries orderQueries, ILogger<OrdersController> logger, IMediator mediator, IEventBus eventBus)
         {
             _orderQueries = orderQueries;
             _logger = logger;
