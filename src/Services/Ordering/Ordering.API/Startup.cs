@@ -1,6 +1,5 @@
 ﻿using Autofac;
 using HealthChecks.UI.Client;
-using MediatR;
 using Microservices.Core.EventBus.Abstractions;
 using Microservices.Core.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -35,7 +34,7 @@ namespace Ordering.API
         #region Public Methods
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IEventBus eventBus, IMediator mediator)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IEventBus eventBus)
         {
             if (env.IsDevelopment())
             {
@@ -50,7 +49,7 @@ namespace Ordering.API
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapHealthChecks("/health", new HealthCheckOptions()
+                endpoints.MapHealthChecks("/health", new HealthCheckOptions
                 {
                     Predicate = _ => true,
                     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse

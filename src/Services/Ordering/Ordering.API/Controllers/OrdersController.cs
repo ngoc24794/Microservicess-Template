@@ -26,7 +26,7 @@ namespace Ordering.API.Controllers
 
         #region Public Constructors
 
-        public OrdersController(IOrderQueries orderQueries, ILogger<OrdersController> logger, IMediator mediator, IEventBus eventBus)
+        public OrdersController(IOrderQueries orderQueries, ILogger<OrdersController> logger, IMediator mediator)
         {
             _orderQueries = orderQueries;
             _logger = logger;
@@ -43,15 +43,8 @@ namespace Ordering.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<ActionResult> GetOrderAsync(int orderId)
         {
-            try
-            {
-                var order = await _orderQueries.GetOrderAsync(orderId);
-                return Ok(order);
-            }
-            catch
-            {
-                return NotFound();
-            }
+            var order = await _orderQueries.GetOrderAsync(orderId);
+            return Ok(order);
         }
 
         [Route("order")]
