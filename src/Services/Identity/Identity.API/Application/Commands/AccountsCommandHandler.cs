@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Identity.API.Application.IntegrationEvents.Events;
 using Identity.API.Application.Queries.Models;
 using MediatR;
 using Microservices.Core.Domain.Services;
@@ -10,29 +9,41 @@ using Microsoft.Extensions.Logging;
 
 namespace Identity.API.Application.Commands
 {
-    public class AccountsCommandHandler 
+    public class AccountsCommandHandler
         : IRequestHandler<RegisterCommand, bool>
     {
+        #region Fields
+
         private readonly IIntegrationEventService _integrationEventService;
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<AccountsCommandHandler> _logger;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        #endregion
+
+        #region Constructors
 
         public AccountsCommandHandler(IIntegrationEventService integrationEventService,
             UserManager<ApplicationUser> userManager,
             ILogger<AccountsCommandHandler> logger)
         {
-            _integrationEventService = integrationEventService ?? throw new ArgumentNullException(nameof(integrationEventService));
+            _integrationEventService = integrationEventService ??
+                                       throw new ArgumentNullException(nameof(integrationEventService));
             _userManager = userManager;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
+
+        #endregion
+
+        #region IRequestHandler<RegisterCommand,bool> Members
 
         public async Task<bool> Handle(RegisterCommand message, CancellationToken cancellationToken)
         {
             _logger.LogInformation("----- Start Register");
             //Xử lý dữ liệu đăng ký
-            var user = new ApplicationUser() {
-                UserName = message.Email, 
-                Email = message.Email 
+            var user = new ApplicationUser
+            {
+                UserName = message.Email,
+                Email = message.Email
             };
             var result = await _userManager.CreateAsync(user, message.Password);
             if (result.Succeeded)
@@ -40,8 +51,11 @@ namespace Identity.API.Application.Commands
                 _logger.LogInformation("User created a new account with password.");
                 return true;
             }
+
             _logger.LogInformation("--- Register UnSuccessfull");
             return false;
         }
+
+        #endregion
     }
 }

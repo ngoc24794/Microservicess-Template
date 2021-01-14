@@ -34,6 +34,7 @@
 	<ItemGroup>
 		<Folder Include="Application\DomainEventHandlers" />
 		<Folder Include="Application\IntegrationEvents\EventHandling" />
+		<Folder Include="Application\IntegrationEvents\Events" />
 		<Folder Include="Application\Queries\Services" />
 	</ItemGroup>
 
