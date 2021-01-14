@@ -13,22 +13,20 @@ namespace Identity.API.Application.Commands
     {
         #region Fields
 
-        private readonly IIntegrationEventService _integrationEventService;
         private readonly ILogger<AccountsCommandHandler> _logger;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly UserManager<ApplicationUser>    _userManager;
 
         #endregion
 
         #region Constructors
 
-        public AccountsCommandHandler(IIntegrationEventService integrationEventService,
-            UserManager<ApplicationUser> userManager,
+        public AccountsCommandHandler(
+            // UserManager<ApplicationUser>    userManager,
+            IIntegrationEventService integrationEventService,
             ILogger<AccountsCommandHandler> logger)
         {
-            _integrationEventService = integrationEventService ??
-                                       throw new ArgumentNullException(nameof(integrationEventService));
-            _userManager = userManager;
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            // _userManager = userManager ?? throw new ArgumentException(nameof(userManager));
+            _logger      = logger      ?? throw new ArgumentNullException(nameof(logger));
         }
 
         #endregion
@@ -42,14 +40,14 @@ namespace Identity.API.Application.Commands
             var user = new ApplicationUser
             {
                 UserName = message.Email,
-                Email = message.Email
+                Email    = message.Email
             };
-            var result = await _userManager.CreateAsync(user, message.Password);
-            if (result.Succeeded)
-            {
-                _logger.LogInformation("User created a new account with password.");
-                return true;
-            }
+            // var result = await _userManager.CreateAsync(user, message.Password);
+            // if (result.Succeeded)
+            // {
+            //     _logger.LogInformation("User created a new account with password.");
+            //     return true;
+            // }
 
             _logger.LogInformation("--- Register UnSuccessfull");
             return false;

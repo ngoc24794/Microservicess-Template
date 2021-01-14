@@ -39,7 +39,6 @@ namespace Ordering.Infrastructure
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new ClientRequestEntityTypeConfiguration());
-            modelBuilder.ApplyConfiguration(new IntegrationEventLogEntryTypeConfiguration());
             modelBuilder.ApplyConfiguration(new PaymentMethodEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new OrderEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new OrderItemEntityTypeConfiguration());
