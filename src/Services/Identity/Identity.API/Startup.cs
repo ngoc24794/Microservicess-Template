@@ -121,8 +121,8 @@ namespace Identity.API
                 .AddCheck("self", () => HealthCheckResult.Healthy());
             
             //Cấu hình server để chạy Identity
-            services.AddDbContext<ApplicationDbContext>(
-                options => options.UseSqlServer(Configuration.GetConnectionString("ConnectionString")));
+            //services.AddDbContext<ApplicationDbContext>(
+            //    options => options.UseSqlServer(Configuration.GetConnectionString("ConnectionString")));
 
             services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();

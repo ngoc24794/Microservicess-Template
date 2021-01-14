@@ -32,14 +32,12 @@ namespace Identity.API.Infrastructures.AutofacModules
                 .AsClosedTypesOf(typeof(IIntegrationEventHandler<>))
                 .InstancePerLifetimeScope();
 
-            //builder.Register(context =>
-            //{
-            //    var mediator = context.Resolve<IMediator>();
-            //    var configuration = context.Resolve<IConfiguration>();
-            //    return new DbContextCore(
-            //        new DbContextOptionsBuilder<DbContextCore>().UseSqlServer(configuration["SqlConnection"]).Options,
-            //        mediator);
-            //}).SingleInstance().InstancePerLifetimeScope();
+            builder.Register(context =>
+            {
+                var configuration = context.Resolve<IConfiguration>();
+                return new ApplicationDbContext(
+                    new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(configuration["SqlConnection"]).Options);
+            }).SingleInstance().InstancePerLifetimeScope();
         }
 
         #endregion
