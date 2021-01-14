@@ -13,6 +13,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
+using Autofac.Extensions.DependencyInjection;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
 using Identity.API.Infrastructures;
@@ -82,14 +83,14 @@ namespace Identity.API
         /// Phương thức này được gọi sau <see cref="ConfigureServices(IServiceCollection)"/>
         /// </summary>
         /// <param name="builder">Autofac ContainerBuilder</param>
-        public void ConfigureContainer(ContainerBuilder builder)
-        {
-            // Khởi tạo Serilog để ghi log
-            builder.RegisterSerilog(Configuration);
-
-            // Đăng ký tất cả các mô đun Autofac
-            builder.RegisterAssemblyModules(Assembly.GetExecutingAssembly());
-        }
+        // public void ConfigureContainer(ContainerBuilder builder)
+        // {
+        //     // Khởi tạo Serilog để ghi log
+        //     builder.RegisterSerilog(Configuration);
+        //
+        //     // Đăng ký tất cả các mô đun Autofac
+        //     builder.RegisterAssemblyModules(Assembly.GetExecutingAssembly());
+        // }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public virtual void ConfigureServices(IServiceCollection services)
@@ -167,6 +168,15 @@ namespace Identity.API
                     options.EnableTokenCleanup = true;
                 })
                 .AddDeveloperSigningCredential();*/
+            
+            var container = new ContainerBuilder();
+            // container.Populate(services);
+// Khởi tạo Serilog để ghi log
+            container.RegisterSerilog(Configuration);
+
+            // Đăng ký tất cả các mô đun Autofac
+            container.RegisterAssemblyModules(Assembly.GetExecutingAssembly());
+            // new AutofacServiceProvider(container.Build());
         }
 
         #endregion Public Methods
