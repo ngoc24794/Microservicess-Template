@@ -8,6 +8,7 @@ using Microservices.Core.EventBus.CommandBus.Idempotency;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
+using Identity.API.Application.Queries.Services;
 
 namespace Identity.API.Infrastructures.AutofacModules
 {
@@ -35,8 +36,10 @@ namespace Identity.API.Infrastructures.AutofacModules
             {
                 var mediator = context.Resolve<IMediator>();
                 var configuration = context.Resolve<IConfiguration>();
-                return new DbContextCore(new DbContextOptionsBuilder<DbContextCore>().UseSqlServer(configuration["ConnectionString"]).Options, mediator);
+                return new DbContextCore(new DbContextOptionsBuilder<DbContextCore>().UseSqlServer(configuration["SqlConnection"]).Options, mediator);
             }).SingleInstance().InstancePerLifetimeScope();
+            
+            builder.Register<IAuthQueries>(context => new AuthQueries(context.Resolve<IConfiguration>()["SqlConnection"])).InstancePerLifetimeScope();
         }
 
         #endregion Protected Methods

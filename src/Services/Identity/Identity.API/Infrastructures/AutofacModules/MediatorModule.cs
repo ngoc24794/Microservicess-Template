@@ -26,6 +26,10 @@ namespace Identity.API.Infrastructures.AutofacModules
             builder.RegisterGeneric(typeof(TransactionBehaviour<,>))
                 .As(typeof(IPipelineBehavior<,>))
                 .InstancePerLifetimeScope();
+            
+            /*builder.RegisterGeneric(typeof(RegisterCommand))
+                .As(typeof(IPipelineBehavior<,>))
+                .InstancePerLifetimeScope();*/
         }
 
         #endregion Protected Methods
