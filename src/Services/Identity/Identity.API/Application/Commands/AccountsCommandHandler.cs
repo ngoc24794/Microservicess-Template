@@ -10,16 +10,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Identity.API.Application.Commands
 {
-    public class AuthsCommandHandler 
+    public class AccountsCommandHandler 
         : IRequestHandler<RegisterCommand, bool>
     {
         private readonly IIntegrationEventService _integrationEventService;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly ILogger<AuthsCommandHandler> _logger;
+        private readonly ILogger<AccountsCommandHandler> _logger;
 
-        public AuthsCommandHandler(IIntegrationEventService integrationEventService,
+        public AccountsCommandHandler(IIntegrationEventService integrationEventService,
             UserManager<ApplicationUser> userManager,
-            ILogger<AuthsCommandHandler> logger)
+            ILogger<AccountsCommandHandler> logger)
         {
             _integrationEventService = integrationEventService ?? throw new ArgumentNullException(nameof(integrationEventService));
             _userManager = userManager;
@@ -31,8 +31,6 @@ namespace Identity.API.Application.Commands
             _logger.LogInformation("----- Start Register");
             //Xử lý dữ liệu đăng ký
             var user = new ApplicationUser() {
-                Ho_ten = message.Name,
-                /*DOB = message.DOB,*/
                 UserName = message.Email, 
                 Email = message.Email 
             };

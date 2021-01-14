@@ -14,8 +14,10 @@ using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
 using Identity.API.Application.Queries.Models;
+using Identity.API.Infrastructures;
 using IdentityServer4.Configuration;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Identity.API
