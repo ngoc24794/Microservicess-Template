@@ -1,4 +1,5 @@
-﻿using Autofac;
+﻿using System;
+using Autofac;
 using HealthChecks.UI.Client;
 using MediatR;
 using Microservices.Core.EventBus.Abstractions;
@@ -12,6 +13,10 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
+using Identity.API.Application.Queries.Models;
+using IdentityServer4.Configuration;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Identity.API
 {
@@ -46,6 +51,7 @@ namespace Identity.API
 
             app.UseRouting();
 
+            app.UseIdentityServer();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -65,6 +71,7 @@ namespace Identity.API
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "My Test1 Api v1");
             });
 
+            /*app.UseCors();*/
             app.UseEventBus(eventBus);
         }
 
@@ -109,6 +116,53 @@ namespace Identity.API
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
+            
+            //Cấu hình server để chạy Identity
+            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("SqlConnection")));
+
+            services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+                .AddEntityFrameworkStores<ApplicationDbContext>();
+            
+            //Cấu hình IndentityServer4
+            //Chạy tĩnh
+            services.AddIdentityServer()
+                .AddInMemoryClients(IdentityConfiguration.Clients)
+                .AddInMemoryIdentityResources(IdentityConfiguration.IdentityResources)
+                .AddInMemoryApiResources(IdentityConfiguration.ApiResources)
+                .AddInMemoryApiScopes(IdentityConfiguration.ApiScopes)
+                .AddTestUsers(IdentityConfiguration.TestUsers)
+                .AddDeveloperSigningCredential();
+            
+            //Chạy từ database
+            /*string connectionString = Configuration.GetConnectionString("SqlConnection");
+            var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
+
+            services.AddIdentityServer(options =>
+                {
+                    options.Events.RaiseErrorEvents = true;
+                    options.Events.RaiseInformationEvents = true;
+                    options.Events.RaiseFailureEvents = true;
+                    options.Events.RaiseSuccessEvents = true;
+                    options.UserInteraction.LoginUrl = "/Account/Login";
+                    options.UserInteraction.LogoutUrl = "/Account/Logout";
+                    options.Authentication = new AuthenticationOptions()
+                    {
+                        CookieLifetime = TimeSpan.FromHours(10), // ID server cookie timeout set to 10 hours
+                        CookieSlidingExpiration = true
+                    };
+                })
+                .AddConfigurationStore(options =>
+                {
+                    options.ConfigureDbContext = b =>
+                        b.UseSqlServer(connectionString, sql => sql.MigrationsAssembly(migrationsAssembly));
+                })
+                .AddOperationalStore(options =>
+                {
+                    options.ConfigureDbContext = b =>
+                        b.UseSqlServer(connectionString, sql => sql.MigrationsAssembly(migrationsAssembly));
+                    options.EnableTokenCleanup = true;
+                })
+                .AddDeveloperSigningCredential();*/
         }
 
         #endregion Public Methods
