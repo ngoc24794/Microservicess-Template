@@ -9,8 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Identity.API.Application.Commands
 {
-    public class AccountsCommandHandler
-        : IRequestHandler<RegisterCommand, bool>
+    public class AccountsCommandHandler : IRequestHandler<RegisterCommand, bool>
     {
         #region Fields
 

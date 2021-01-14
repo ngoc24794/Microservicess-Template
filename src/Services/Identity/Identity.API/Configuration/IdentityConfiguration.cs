@@ -4,7 +4,7 @@ using IdentityModel;
 using IdentityServer4.Models;
 using IdentityServer4.Test;
 
-namespace Identity.API.Application.Queries.Models
+namespace Identity.API.Configuration
 {
     public class IdentityConfiguration
     {

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
 using Identity.API.Application.Queries.Models;
+using Identity.API.Configuration;
 using Identity.API.Infrastructures;
 using IdentityServer4.Configuration;
 using Microsoft.AspNetCore.Identity;
@@ -120,7 +121,8 @@ namespace Identity.API
                 .AddCheck("self", () => HealthCheckResult.Healthy());
             
             //Cấu hình server để chạy Identity
-            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("SqlConnection")));
+            services.AddDbContext<ApplicationDbContext>(
+                options => options.UseSqlServer(Configuration.GetConnectionString("ConnectionString")));
 
             services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
