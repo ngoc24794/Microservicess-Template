@@ -1,25 +1,30 @@
 ﻿using System.Data;
+using System.Threading;
 using System.Threading.Tasks;
 using Identity.API.Application.Queries.Models;
+using MediatR;
 using Microservices.Core.Domain.SeedWork;
+using Microservices.Core.Extensions;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Identity.API.Infrastructures
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDbContextCore
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDbContextCore, IUnitOfWork
     {
         #region Fields
 
-        private IDbContextTransaction _currentTransaction;
+        private readonly IMediator             _mediator;
+        private          IDbContextTransaction _currentTransaction;
 
         #endregion
 
         #region Constructors
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IMediator mediator) : base(options)
         {
+            _mediator = mediator;
         }
 
         #endregion
@@ -67,6 +72,28 @@ namespace Identity.API.Infrastructures
                     _currentTransaction = null;
                 }
             }
+        }
+
+        #endregion
+
+        #region IUnitOfWork Members
+
+        public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+        {
+            // Dispatch Domain Events collection. Choices:
+            // A) Right BEFORE committing data (EF SaveChanges) into the DB will make a single
+            // transaction including side effects from the domain event handlers which are using the
+            // same DbContext with "InstancePerLifetimeScope" or "scoped" lifetime
+            // B) Right AFTER committing data (EF SaveChanges) into the DB will make multiple transactions.
+            // You will need to handle eventual consistency and compensatory actions in case of
+            // failures in any of the Handlers.
+            await _mediator?.DispatchDomainEventsAsync(this);
+
+            // After executing this line all the changes (from the Command Handler and Domain Event
+            // Handlers) performed through the DbContext will be committed
+            await base.SaveChangesAsync(cancellationToken);
+
+            return true;
         }
 
         #endregion

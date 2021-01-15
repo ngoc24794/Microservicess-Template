@@ -1,13 +1,11 @@
 ﻿using System.Reflection;
 using Autofac;
 using FluentValidation;
-using Identity.API.Application.Queries.Models;
+using MediatR;
 using Microservices.Core.Domain.Idempotency;
 using Microservices.Core.Domain.SeedWork;
 using Microservices.Core.EventBus.Abstractions;
 using Microservices.Core.EventBus.CommandBus.Idempotency;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Module = Autofac.Module;
@@ -36,8 +34,9 @@ namespace Identity.API.Infrastructures.AutofacModules
 
             builder.Register<IDbContextCore>(context =>
             {
+                var mediator = context.Resolve<IMediator>();
                 var configuration = context.Resolve<IConfiguration>();
-                return new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(configuration["ConnectionString"]).Options);
+                return new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(configuration["ConnectionString"]).Options, mediator);
             }).SingleInstance().InstancePerLifetimeScope();
 
             builder.Register(context => context.Resolve<IDbContextCore>() as ApplicationDbContext);
