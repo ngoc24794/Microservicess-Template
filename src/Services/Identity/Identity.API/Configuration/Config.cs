@@ -21,7 +21,8 @@ namespace Identity.API.Configuration
         public static IEnumerable<ApiScope> ApiScopes =>
             new List<ApiScope>
             {
-                new ApiScope("api1", "My API")
+                new ApiScope("api1", "My API"),
+                new ApiScope("web.apigateway", "Web API Gateway")
             };
 
         public static IEnumerable<Client> Clients =>
@@ -33,7 +34,7 @@ namespace Identity.API.Configuration
                     ClientId = "client",
                     ClientSecrets = { new Secret("secret".Sha256()) },
 
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    AllowedGrantTypes = GrantTypes.ResourceOwnerPasswordAndClientCredentials,
                     // scopes that client has access to
                     AllowedScopes =
                     {
@@ -61,6 +62,14 @@ namespace Identity.API.Configuration
                         IdentityServerConstants.StandardScopes.Profile,
                         "api1"
                     }
+                },
+                
+                new Client()
+                {
+                    ClientId          = "web.apigateway",
+                    ClientSecrets     = {new Secret("Y2F0Y2hlciUyMHdvbmclMjBsb3ZlJTIwLm5ldA".Sha256())},
+                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    AllowedScopes     = { "web.apigateway"}
                 }
             };
     }

@@ -130,6 +130,7 @@ namespace Identity.API
             // Adds IdentityServer
             var builder = services.AddIdentityServer()
                 .AddTestUsers(TestUsers.Users)
+                .AddAspNetIdentity<ApplicationUser>()
                 .AddConfigurationStore(options =>
                 {
                     options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
@@ -152,9 +153,12 @@ namespace Identity.API
 
                 var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
                 context.Database.Migrate();
-                if (!context.Clients.Any())
+
+                var clients = Config.Clients.Where(x => context.Clients.Any(o => x.ClientId == o.ClientId) == false).ToList();
+                
+                if (clients.Any())
                 {
-                    foreach (var client in Config.Clients) context.Clients.Add(client.ToEntity());
+                    foreach (var client in clients) context.Clients.Add(client.ToEntity());
                     context.SaveChanges();
                 }
 
@@ -164,9 +168,10 @@ namespace Identity.API
                     context.SaveChanges();
                 }
 
-                if (!context.ApiScopes.Any())
+                var scopes = Config.ApiScopes.Where(x => context.ApiScopes.Any(o => x.Name == o.Name) == false).ToList();
+                if (scopes.Any())
                 {
-                    foreach (var resource in Config.ApiScopes)
+                    foreach (var resource in scopes)
                     {
                         context.ApiScopes.Add(resource.ToEntity());
                     }
