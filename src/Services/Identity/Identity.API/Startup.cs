@@ -58,6 +58,7 @@ namespace Identity.API
             app.UseRouting();
 
             app.UseIdentityServer();
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -134,6 +135,8 @@ namespace Identity.API
             // Adds IdentityServer
             var builder = services.AddIdentityServer()
                 .AddTestUsers(TestUsers.Users)
+                .AddAspNetIdentity<ApplicationUser>()
+                 .AddDeveloperSigningCredential()
                 .AddConfigurationStore(options =>
                 {
                     options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
