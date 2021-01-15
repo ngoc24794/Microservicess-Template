@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microservices.Core.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Ordering.API.Application.IntegrationEvents.Events;
 using Ordering.API.Application.Queries.Models.OrderAggregate;
@@ -9,6 +8,7 @@ using Ordering.Domain.Models.OrderAggregate;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microservices.Core.Domain.IntegrationEventLogs;
 
 namespace Ordering.API.Application.Commands
 {
