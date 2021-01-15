@@ -39,6 +39,8 @@ namespace Identity.API.Infrastructures.AutofacModules
                 var configuration = context.Resolve<IConfiguration>();
                 return new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(configuration["ConnectionString"]).Options);
             }).SingleInstance().InstancePerLifetimeScope();
+
+            builder.Register(context => context.Resolve<IDbContextCore>() as ApplicationDbContext);
         }
 
         #endregion
