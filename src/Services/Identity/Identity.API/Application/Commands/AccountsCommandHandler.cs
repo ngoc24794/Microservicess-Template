@@ -18,7 +18,7 @@ namespace Identity.API.Application.Commands
     {
         #region Fields
 
-        private readonly IIntegrationEventService        _integrationEventService;
+        private readonly IIntegrationEventService _integrationEventService;
         private readonly ILogger<AccountsCommandHandler> _logger;
         private readonly SignInManager<ApplicationUser>  _signInManager;
         private readonly UserManager<ApplicationUser>    _userManager;
@@ -46,16 +46,22 @@ namespace Identity.API.Application.Commands
         public async Task<bool> Handle(LoginCommand model, CancellationToken cancellationToken)
         {
             _logger.LogInformation("----- Start Login");
-            var result =
-                await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.Remember, false);
+            var result = 
+                await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.Remember, lockoutOnFailure: false);
             if (result.Succeeded)
             {
                 _logger.LogInformation("----- Login GetToken");
-                var httpClient = new HttpClient();
-                var identityServerResponse = await httpClient.RequestPasswordTokenAsync(new PasswordTokenRequest
+                HttpClient httpClient = new HttpClient();
+                var identityServerResponse = await httpClient.RequestTokenAsync(new PasswordTokenRequest
                 {
-                    Address   = "http://localhost:5000/connect/token",
-                    GrantType = "password"
+                    Address = "http://localhost:5000/connect/token",
+                    ClientId = "client",
+                    UserName = model.Email,
+                  //  Password = model.Password,
+                    GrantType = "client_credentials",
+                    ClientSecret = "secret",
+                    Scope = "api1"
+
                     //Lấy dữ liệu 
                     //1. ClientID ???? => từ client gửi lên hay lấy từ db thông qua username
                     //2. ClientSecret ????  => từ client gửi lên hay lấy từ db thông qua username
@@ -68,18 +74,16 @@ namespace Identity.API.Application.Commands
                     UserName = username,
                     Password = password.ToSha256()*/
                 });
-                if (!identityServerResponse.IsError)
-                {
+                if (!identityServerResponse.IsError){
                     var client = new HttpClient();
-                    client.DefaultRequestHeaders.Authorization =
+                    client.DefaultRequestHeaders.Authorization = 
                         new AuthenticationHeaderValue("Bearer", identityServerResponse.AccessToken);
-                    var apiResponse = await client.GetAsync("https://localhost:44328/api/values");
+                   //var apiResponse = await client.GetAsync("https://localhost:44328/api/values");
                 }
-
                 _logger.LogInformation("----- Login successfull");
                 return true;
             }
-
+            
             _logger.LogInformation("----- Login UnSuccessfull");
             return false;
         }
@@ -109,5 +113,6 @@ namespace Identity.API.Application.Commands
         }
 
         #endregion
+        
     }
 }

@@ -131,6 +131,7 @@ namespace Identity.API
             var builder = services.AddIdentityServer()
                 .AddTestUsers(TestUsers.Users)
                 .AddAspNetIdentity<ApplicationUser>()
+                 .AddDeveloperSigningCredential()
                 .AddConfigurationStore(options =>
                 {
                     options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
