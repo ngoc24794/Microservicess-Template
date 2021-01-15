@@ -20,19 +20,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
-using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace Identity.API
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _env;
-
         #region Constructors
 
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration)
         {
-            _env = env;
             Configuration = configuration;
         }
 
@@ -50,7 +46,7 @@ namespace Identity.API
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IEventBus eventBus, IMediator mediator)
         {
             InitializeDatabase(app);
-            
+
             if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
 
             app.UseDiscoveryClient();
@@ -101,7 +97,7 @@ namespace Identity.API
 
             // RabbitMQ
             services.AddMessageBroker(Configuration);
-            
+
             services.AddIntegrationEventLogService();
 
             // Swagger
@@ -121,7 +117,7 @@ namespace Identity.API
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
-            
+
             //Cấu hình server để chạy Identity
             services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
@@ -148,10 +144,6 @@ namespace Identity.API
             builder.AddDeveloperSigningCredential();
         }
 
-        #endregion
-        
-        #region InsertData to IDSV4 when running OneTime
-
         private void InitializeDatabase(IApplicationBuilder app)
         {
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
@@ -162,19 +154,13 @@ namespace Identity.API
                 context.Database.Migrate();
                 if (!context.Clients.Any())
                 {
-                    foreach (var client in Config.Clients)
-                    {
-                        context.Clients.Add(client.ToEntity());
-                    }
+                    foreach (var client in Config.Clients) context.Clients.Add(client.ToEntity());
                     context.SaveChanges();
                 }
 
                 if (!context.IdentityResources.Any())
                 {
-                    foreach (var resource in Config.IdentityResources)
-                    {
-                        context.IdentityResources.Add(resource.ToEntity());
-                    }
+                    foreach (var resource in Config.IdentityResources) context.IdentityResources.Add(resource.ToEntity());
                     context.SaveChanges();
                 }
 
@@ -184,6 +170,7 @@ namespace Identity.API
                     {
                         context.ApiScopes.Add(resource.ToEntity());
                     }
+
                     context.SaveChanges();
                 }
             }
