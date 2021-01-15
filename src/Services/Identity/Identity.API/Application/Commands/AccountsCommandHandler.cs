@@ -75,15 +75,21 @@ namespace Identity.API.Application.Commands
             {
                 _logger.LogInformation("----- Login GetToken");
                 HttpClient httpClient = new HttpClient();
-                var identityServerResponse = await httpClient.RequestPasswordTokenAsync(new PasswordTokenRequest
+                var identityServerResponse = await httpClient.RequestTokenAsync(new PasswordTokenRequest
                 {
                     Address = "http://localhost:5000/connect/token",
-                    GrantType = "password",
+                    ClientId = "client",
+                    UserName = model.Email,
+                  //  Password = model.Password,
+                    GrantType = "client_credentials",
+                    ClientSecret = "secret",
+                    Scope = "api1"
+
                     //Lấy dữ liệu 
                     //1. ClientID ???? => từ client gửi lên hay lấy từ db thông qua username
                     //2. ClientSecret ????  => từ client gửi lên hay lấy từ db thông qua username
                     //3. Scope => mặc định cái API trả về cho User khi đăng nhập thành công hoặc lấy từ db thông qua username
-                    
+
                     /*ClientId = "ConsoleApp_ClientId",
                     ClientSecret = "secret_for_the_consoleapp",
                     Scope = "ApiName",
@@ -95,7 +101,7 @@ namespace Identity.API.Application.Commands
                     var client = new HttpClient();
                     client.DefaultRequestHeaders.Authorization = 
                         new AuthenticationHeaderValue("Bearer", identityServerResponse.AccessToken);
-                    var apiResponse = await client.GetAsync("https://localhost:44328/api/values");
+                   //var apiResponse = await client.GetAsync("https://localhost:44328/api/values");
                 }
                 _logger.LogInformation("----- Login successfull");
                 return true;
