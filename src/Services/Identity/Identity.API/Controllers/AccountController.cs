@@ -30,6 +30,14 @@ namespace Identity.API.Controllers
 
         #region Methods
 
+        [Route("login")]
+        [HttpPost]
+        [ProducesResponseType(typeof(int), (int) HttpStatusCode.OK)]
+        public async Task<ActionResult<bool>> LoginAsync([FromBody] LoginCommand command)
+        {
+            return Ok(await _mediator.Send(command));
+        }
+        
         [Route("register")]
         [HttpPost]
         [ProducesResponseType(typeof(int), (int) HttpStatusCode.OK)]

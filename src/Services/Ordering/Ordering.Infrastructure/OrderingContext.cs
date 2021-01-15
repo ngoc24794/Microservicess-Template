@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microservices.Core.Domain.Idempotency;
 using Microservices.Core.Domain.SeedWork;
-using Microservices.Core.IntegrationEventLogEF;
 using Microsoft.EntityFrameworkCore;
 using Ordering.Domain.Models.BuyerAggregate;
 using Ordering.Domain.Models.OrderAggregate;
