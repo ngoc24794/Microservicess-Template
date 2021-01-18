@@ -12,6 +12,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Basket.API
 {
@@ -46,6 +47,7 @@ namespace Basket.API
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -91,6 +93,8 @@ namespace Basket.API
 
             // RabbitMQ
             services.AddMessageBroker(Configuration);
+            
+            services.AddIntegrationEventLogService();
 
             // Swagger
             services.AddSwaggerGen();
@@ -109,6 +113,24 @@ namespace Basket.API
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("Api1Policy", builder =>
+                {
+                    builder.RequireClaim("scope", "api1");
+                });
+            });
+            services.AddAuthentication("Bearer")
+                .AddJwtBearer("Bearer", options =>
+                {
+                    options.Authority = Configuration["Identity:Authority"];
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateAudience = false
+                    };
+                    options.RequireHttpsMetadata = false;
+                });
         }
 
         #endregion Public Methods
