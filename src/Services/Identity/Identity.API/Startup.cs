@@ -120,6 +120,9 @@ namespace Identity.API
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
+            
+            //Khai báo cookie
+            services.AddHttpContextAccessor();
 
             //Cấu hình server để chạy Identity
             /*services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
