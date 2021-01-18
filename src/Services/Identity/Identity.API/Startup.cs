@@ -56,6 +56,7 @@ namespace Identity.API
             app.UseRouting();
 
             app.UseIdentityServer();
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -188,6 +189,8 @@ namespace Identity.API
                 });*/
 
             /*builder.AddDeveloperSigningCredential();*/
+            services.AddAuthentication();
+            services.AddAuthorization();
         }
         
         #endregion
