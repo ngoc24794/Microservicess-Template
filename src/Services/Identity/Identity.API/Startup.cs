@@ -1,51 +1,55 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
 using Autofac;
 using HealthChecks.UI.Client;
+using Identity.API.Application.Queries.Models;
+using Identity.API.Configuration;
+using Identity.API.Infrastructures;
+using IdentityServer4.Configuration;
+using IdentityServer4.EntityFramework.DbContexts;
+using IdentityServer4.EntityFramework.Mappers;
 using MediatR;
 using Microservices.Core.EventBus.Abstractions;
 using Microservices.Core.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
-using System.Reflection;
-using Identity.API.Application.Queries.Models;
-using IdentityServer4.Configuration;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace Identity.API
 {
     public class Startup
     {
-        #region Public Constructors
+        #region Constructors
 
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
 
-        #endregion Public Constructors
+        #endregion
 
-        #region Public Properties
+        #region Properties
 
         public IConfiguration Configuration { get; }
 
-        #endregion Public Properties
+        #endregion
 
-        #region Public Methods
+        #region Methods
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IEventBus eventBus, IMediator mediator)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+            InitializeDatabase(app);
+
+            if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
 
             app.UseDiscoveryClient();
 
@@ -56,7 +60,7 @@ namespace Identity.API
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapHealthChecks("/health", new HealthCheckOptions()
+                endpoints.MapHealthChecks("/health", new HealthCheckOptions
                 {
                     Predicate = _ => true,
                     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
@@ -66,17 +70,14 @@ namespace Identity.API
 
             // Swagger
             app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My Test1 Api v1");
-            });
+            app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "My Test1 Api v1"); });
 
             /*app.UseCors();*/
             app.UseEventBus(eventBus);
         }
 
         /// <summary>
-        /// Phương thức này được gọi sau <see cref="ConfigureServices(IServiceCollection)"/>
+        ///     Phương thức này được gọi sau <see cref="ConfigureServices(IServiceCollection)" />
         /// </summary>
         /// <param name="builder">Autofac ContainerBuilder</param>
         public void ConfigureContainer(ContainerBuilder builder)
@@ -99,6 +100,8 @@ namespace Identity.API
             // RabbitMQ
             services.AddMessageBroker(Configuration);
 
+            services.AddIntegrationEventLogService();
+
             // Swagger
             services.AddSwaggerGen();
 
@@ -106,9 +109,9 @@ namespace Identity.API
             services.AddCors(options =>
             {
                 options.AddPolicy("CorsPolicy", builder => builder
-                        .AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader());
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
             });
 
             // Api Controllers
@@ -116,28 +119,23 @@ namespace Identity.API
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
-            
+
             //Cấu hình server để chạy Identity
-            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("SqlConnection")));
+            /*services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+                .AddEntityFrameworkStores<ApplicationDbContext>();*/
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+                {
+                    options.SignIn.RequireConfirmedAccount = true;
+                    options.SignIn.RequireConfirmedEmail = true;
+                })
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
 
-            services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
-            
             //Cấu hình IndentityServer4
-            //Chạy tĩnh
-            services.AddIdentityServer()
-                .AddInMemoryClients(IdentityConfiguration.Clients)
-                .AddInMemoryIdentityResources(IdentityConfiguration.IdentityResources)
-                .AddInMemoryApiResources(IdentityConfiguration.ApiResources)
-                .AddInMemoryApiScopes(IdentityConfiguration.ApiScopes)
-                .AddTestUsers(IdentityConfiguration.TestUsers)
-                .AddDeveloperSigningCredential();
-            
-            //Chạy từ database
-            /*string connectionString = Configuration.GetConnectionString("SqlConnection");
+            //Khai báo chuỗi kết nối
+            var connectionString = Configuration["ConnectionString"];
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
-
-            services.AddIdentityServer(options =>
+            var builder = services.AddIdentityServer(options =>
                 {
                     options.Events.RaiseErrorEvents = true;
                     options.Events.RaiseInformationEvents = true;
@@ -162,9 +160,77 @@ namespace Identity.API
                         b.UseSqlServer(connectionString, sql => sql.MigrationsAssembly(migrationsAssembly));
                     options.EnableTokenCleanup = true;
                 })
-                .AddDeveloperSigningCredential();*/
+                .AddAspNetIdentity<ApplicationUser>()
+                .AddDeveloperSigningCredential();
+
+            /*if (Environment.IsDevelopment())
+            {
+                builder.AddDeveloperSigningCredential();
+            }
+            else
+            {
+                throw new Exception("need to configure key material");
+            }*/
+            // Adds IdentityServer
+            /*var builder = services.AddIdentityServer()
+                /*.AddTestUsers(TestUsers.Users)#1#
+                .AddAspNetIdentity<ApplicationUser>()
+                 .AddDeveloperSigningCredential()
+                .AddConfigurationStore(options =>
+                {
+                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
+                        sql => sql.MigrationsAssembly(migrationsAssembly));
+                })
+                .AddOperationalStore(options =>
+                {
+                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
+                        sql => sql.MigrationsAssembly(migrationsAssembly));
+                });*/
+
+            /*builder.AddDeveloperSigningCredential();*/
+        }
+        
+        #endregion
+
+        #region InsertData to IDSV4 when running OneTime
+        
+        private void InitializeDatabase(IApplicationBuilder app)
+        {
+            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+            {
+                serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
+
+                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+                context.Database.Migrate();
+                if (!context.Clients.Any())
+                {
+                    foreach (var client in Config.Clients)
+                    {
+                        context.Clients.Add(client.ToEntity());
+                    }
+                    context.SaveChanges();
+                }
+
+                if (!context.IdentityResources.Any())
+                {
+                    foreach (var resource in Config.IdentityResources)
+                    {
+                        context.IdentityResources.Add(resource.ToEntity());
+                    }
+                    context.SaveChanges();
+                }
+
+                if (!context.ApiScopes.Any())
+                {
+                    foreach (var resource in Config.ApiScopes)
+                    {
+                        context.ApiScopes.Add(resource.ToEntity());
+                    }
+                    context.SaveChanges();
+                }
+            }
         }
 
-        #endregion Public Methods
+        #endregion
     }
 }

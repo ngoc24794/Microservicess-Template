@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microservices.Core.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Ordering.API.Application.IntegrationEvents.Events;
 using Ordering.Domain.Events;
@@ -7,6 +6,7 @@ using Ordering.Domain.Models.BuyerAggregate;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microservices.Core.Domain.IntegrationEventLogs;
 
 namespace Ordering.API.Application.DomainEventHandlers
 {

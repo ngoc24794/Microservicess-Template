@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microservices.Core.Domain.Idempotency;
 using Microservices.Core.Domain.SeedWork;
-using Microservices.Core.IntegrationEventLogEF;
 using Microsoft.EntityFrameworkCore;
 using Ordering.Domain.Models.BuyerAggregate;
 using Ordering.Domain.Models.OrderAggregate;
@@ -39,7 +38,6 @@ namespace Ordering.Infrastructure
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new ClientRequestEntityTypeConfiguration());
-            modelBuilder.ApplyConfiguration(new IntegrationEventLogEntryTypeConfiguration());
             modelBuilder.ApplyConfiguration(new PaymentMethodEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new OrderEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new OrderItemEntityTypeConfiguration());

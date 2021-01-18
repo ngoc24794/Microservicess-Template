@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microservices.Core.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Ordering.API.Application.Commands;
@@ -9,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microservices.Core.Domain.IntegrationEventLogs;
 using Xunit;
 using static Ordering.API.Application.Commands.CreateOrderCommand;
 

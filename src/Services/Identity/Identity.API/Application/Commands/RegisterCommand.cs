@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 using MediatR;
 
 namespace Identity.API.Application.Commands
@@ -9,34 +8,22 @@ namespace Identity.API.Application.Commands
     /// </summary>
     public class RegisterCommand : IRequest<bool>
     {
-        #region Private Fields
+        #region Constructors
 
-        #endregion Private Fields
-
-        #region Public Constructors
-
-        public RegisterCommand(string Name, string Email, string Password, string ConfirmPassword)
+        public RegisterCommand(string email, string password)
         {
-            Email = Email;
-            Name = Name;
-            Password = Password;
-            ConfirmPassword = ConfirmPassword;
+            Email = email;
+            Password = password;
         }
 
-        #endregion Public Constructors
+        #endregion
 
-        #region Public Properties
-
-        /*[DataMember] public DateTime DOB { get; private set; }*/
-
-        [DataMember] public string Name { get; set; }
+        #region Properties
 
         [DataMember] public string Email { get; set; }
 
         [DataMember] public string Password { get; set; }
 
-        [DataMember] public string ConfirmPassword { get; set; }
-
-        #endregion Public Properties
+        #endregion
     }
 }
