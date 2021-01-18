@@ -4,7 +4,9 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Identity.API.Application.Queries.Models;
+using IdentityModel;
 using IdentityModel.Client;
+using IdentityServer4;
 using MediatR;
 using Microservices.Core.Domain.IntegrationEventLogs;
 using Microsoft.AspNetCore.Identity;
@@ -20,6 +22,7 @@ namespace Identity.API.Application.Commands
         private readonly IIntegrationEventService _integrationEventService;
         private readonly ILogger<AccountsCommandHandler> _logger;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IdentityServerTools _identityServerTools;
         private readonly UserManager<ApplicationUser> _userManager;
 
         #endregion
@@ -29,13 +32,15 @@ namespace Identity.API.Application.Commands
         public AccountsCommandHandler(IIntegrationEventService integrationEventService,
             UserManager<ApplicationUser> userManager, 
             ILogger<AccountsCommandHandler> logger,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager,
+            IdentityServerTools identityServerTools)
         {
             _integrationEventService = integrationEventService ??
                                        throw new ArgumentNullException(nameof(integrationEventService));
             _userManager = userManager;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _signInManager = signInManager;
+            _identityServerTools = identityServerTools;
         }
 
         #endregion
@@ -49,12 +54,13 @@ namespace Identity.API.Application.Commands
             var user = new ApplicationUser
             {
                 UserName = message.Email,
-                Email = message.Email
+                Email = message.Email,
+                EmailConfirmed = false
             };
             var result = await _userManager.CreateAsync(user, message.Password);
             if (result.Succeeded)
             {
-                _logger.LogInformation("User created a new account with password.");
+                _logger.LogInformation("User created a new account with password");
                 return true;
             }
 
@@ -74,14 +80,70 @@ namespace Identity.API.Application.Commands
             if (result.Succeeded)
             {
                 _logger.LogInformation("----- Login GetToken");
-                HttpClient httpClient = new HttpClient();
-                var identityServerResponse = await httpClient.RequestTokenAsync(new PasswordTokenRequest
+
+                var client = new HttpClient();
+                var disco = await client.GetDiscoveryDocumentAsync("http://localhost:5000");
+                if (disco.IsError)
+                {
+                    _logger.LogWarning("Không tìm thấy IP");
+                }
+                else
+                {
+                    // request token
+                    /*var tokenResponse = await client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
+                    {
+                        Address = disco.TokenEndpoint,
+                        ClientId = "client",
+                        ClientSecret = "secret",
+                        Scope = "api1"
+                    });*/
+
+                    
+                    var tokenReturn=await client.RequestPasswordTokenAsync(new PasswordTokenRequest
+                    {
+                        Address = disco.TokenEndpoint,
+                        Password = model.Password,//.ToSha256(),
+                        ClientId = "ndev01",
+                        UserName = model.Email,
+                        ClientSecret = "secret",
+                        Scope = "apiNDEVpp",
+                        GrantType = "password",
+                        
+                    });
+                    string ketqa = "";
+                    /*var token2 = await client.RequestAuthorizationCodeTokenAsync(new AuthorizationCodeTokenRequest
+                    {
+                        Address = disco.TokenEndpoint,
+                        ClientId = "mvc",
+                        ClientSecret = "secret",
+                        GrantType = "authorization_code"
+                    });*/
+
+                    /*var tokenResponse = await client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
+                    {
+                        Address = disco.TokenEndpoint,
+
+                        ClientId = "client",
+                        ClientSecret = "secret",
+                        Scope = "api1"
+                    });
+
+                    if (tokenResponse.IsError)
+                    {
+                        Console.WriteLine(tokenResponse.Error);
+                        return;
+                    }*/
+                }
+                
+                /*HttpClient httpClient = new HttpClient();
+                /*var identityServerResponse = await httpClient.RequestPasswordTokenAsync(new PasswordTokenRequest#1#
+                var identityServerResponse = await httpClient.requ(new PasswordTokenRequest
                 {
                     Address = "http://localhost:5000/connect/token",
                     ClientId = "client",
                     UserName = model.Email,
-                  //  Password = model.Password,
-                    GrantType = "client_credentials",
+                    Password = model.Password,
+                    GrantType = "password",//"client_credentials",
                     ClientSecret = "secret",
                     Scope = "api1"
 
@@ -95,7 +157,7 @@ namespace Identity.API.Application.Commands
                     Scope = "ApiName",
 
                     UserName = username,
-                    Password = password.ToSha256()*/
+                    Password = password.ToSha256()#1#
                 });
                 if (!identityServerResponse.IsError){
                     var client = new HttpClient();
@@ -103,6 +165,15 @@ namespace Identity.API.Application.Commands
                         new AuthenticationHeaderValue("Bearer", identityServerResponse.AccessToken);
                    //var apiResponse = await client.GetAsync("https://localhost:44328/api/values");
                 }
+                var issuer = "http://" + httpRequest.Host.Value;  
+                var token = await _identityServerTools.IssueJwtAsync(  
+                    30000,  
+                    issuer,  
+                    new System.Security.Claims.Claim[1]   
+                    {  
+                        new System.Security.Claims.Claim("cpf", cpf)  
+                    }  
+                );*/
                 _logger.LogInformation("----- Login successfull");
                 return true;
             }
