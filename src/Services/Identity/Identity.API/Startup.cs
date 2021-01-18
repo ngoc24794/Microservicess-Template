@@ -1,10 +1,12 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Reflection;
 using Autofac;
 using HealthChecks.UI.Client;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
 using Identity.API.Infrastructures;
+using IdentityServer4.Configuration;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
 using MediatR;
@@ -119,17 +121,59 @@ namespace Identity.API
                 .AddCheck("self", () => HealthCheckResult.Healthy());
 
             //Cấu hình server để chạy Identity
-            services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
+            /*services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+                .AddEntityFrameworkStores<ApplicationDbContext>();*/
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+                {
+                    options.SignIn.RequireConfirmedAccount = true;
+                    options.SignIn.RequireConfirmedEmail = true;
+                })
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
 
             //Cấu hình IndentityServer4
             //Khai báo chuỗi kết nối
             var connectionString = Configuration["ConnectionString"];
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
+            var builder = services.AddIdentityServer(options =>
+                {
+                    options.Events.RaiseErrorEvents = true;
+                    options.Events.RaiseInformationEvents = true;
+                    options.Events.RaiseFailureEvents = true;
+                    options.Events.RaiseSuccessEvents = true;
+                    options.UserInteraction.LoginUrl = "/Account/Login";
+                    options.UserInteraction.LogoutUrl = "/Account/Logout";
+                    options.Authentication = new AuthenticationOptions()
+                    {
+                        CookieLifetime = TimeSpan.FromHours(10), // ID server cookie timeout set to 10 hours
+                        CookieSlidingExpiration = true
+                    };
+                })
+                .AddConfigurationStore(options =>
+                {
+                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
+                        sql => sql.MigrationsAssembly(migrationsAssembly));
+                })
+                .AddOperationalStore(options =>
+                {
+                    options.ConfigureDbContext = b =>
+                        b.UseSqlServer(connectionString, sql => sql.MigrationsAssembly(migrationsAssembly));
+                    options.EnableTokenCleanup = true;
+                })
+                .AddAspNetIdentity<ApplicationUser>()
+                .AddDeveloperSigningCredential();
 
+            /*if (Environment.IsDevelopment())
+            {
+                builder.AddDeveloperSigningCredential();
+            }
+            else
+            {
+                throw new Exception("need to configure key material");
+            }*/
             // Adds IdentityServer
-            var builder = services.AddIdentityServer()
-                .AddTestUsers(TestUsers.Users)
+            /*var builder = services.AddIdentityServer()
+                /*.AddTestUsers(TestUsers.Users)#1#
                 .AddAspNetIdentity<ApplicationUser>()
                  .AddDeveloperSigningCredential()
                 .AddConfigurationStore(options =>
@@ -141,11 +185,15 @@ namespace Identity.API
                 {
                     options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
                         sql => sql.MigrationsAssembly(migrationsAssembly));
-                });
+                });*/
 
-            builder.AddDeveloperSigningCredential();
+            /*builder.AddDeveloperSigningCredential();*/
         }
+        
+        #endregion
 
+        #region InsertData to IDSV4 when running OneTime
+        
         private void InitializeDatabase(IApplicationBuilder app)
         {
             using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
@@ -154,29 +202,30 @@ namespace Identity.API
 
                 var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
                 context.Database.Migrate();
-
-                var clients = Config.Clients.Where(x => context.Clients.Any(o => x.ClientId == o.ClientId) == false).ToList();
-                
-                if (clients.Any())
+                if (!context.Clients.Any())
                 {
-                    foreach (var client in clients) context.Clients.Add(client.ToEntity());
+                    foreach (var client in Config.Clients)
+                    {
+                        context.Clients.Add(client.ToEntity());
+                    }
                     context.SaveChanges();
                 }
 
                 if (!context.IdentityResources.Any())
                 {
-                    foreach (var resource in Config.IdentityResources) context.IdentityResources.Add(resource.ToEntity());
+                    foreach (var resource in Config.IdentityResources)
+                    {
+                        context.IdentityResources.Add(resource.ToEntity());
+                    }
                     context.SaveChanges();
                 }
 
-                var scopes = Config.ApiScopes.Where(x => context.ApiScopes.Any(o => x.Name == o.Name) == false).ToList();
-                if (scopes.Any())
+                if (!context.ApiScopes.Any())
                 {
-                    foreach (var resource in scopes)
+                    foreach (var resource in Config.ApiScopes)
                     {
                         context.ApiScopes.Add(resource.ToEntity());
                     }
-
                     context.SaveChanges();
                 }
             }

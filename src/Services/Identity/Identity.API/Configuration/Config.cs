@@ -22,7 +22,7 @@ namespace Identity.API.Configuration
             new List<ApiScope>
             {
                 new ApiScope("api1", "My API"),
-                new ApiScope("web.apigateway", "Web API Gateway")
+                new ApiScope("apiNDEV", "NDev API")
             };
 
         public static IEnumerable<Client> Clients =>
@@ -32,7 +32,7 @@ namespace Identity.API.Configuration
                 new Client
                 {
                     ClientId = "client",
-                    ClientSecrets = { new Secret("secret".Sha256()) },
+                    ClientSecrets = {new Secret("secret".Sha256())},
 
                     AllowedGrantTypes = GrantTypes.ResourceOwnerPasswordAndClientCredentials,
                     // scopes that client has access to
@@ -41,20 +41,20 @@ namespace Identity.API.Configuration
                         "api1"
                     }
                 },
-                
+
                 // interactive ASP.NET Core MVC client
                 new Client
                 {
                     ClientId = "mvc",
-                    ClientSecrets = { new Secret("secret".Sha256()) },
+                    ClientSecrets = {new Secret("secret".Sha256())},
 
                     AllowedGrantTypes = GrantTypes.Code,
-                    
+
                     // where to redirect to after login
-                    RedirectUris = { "https://localhost:5002/signin-oidc" },
+                    RedirectUris = {"https://localhost:5002/signin-oidc"},
 
                     // where to redirect to after logout
-                    PostLogoutRedirectUris = { "https://localhost:5002/signout-callback-oidc" },
+                    PostLogoutRedirectUris = {"https://localhost:5002/signout-callback-oidc"},
 
                     AllowedScopes = new List<string>
                     {
@@ -63,13 +63,26 @@ namespace Identity.API.Configuration
                         "api1"
                     }
                 },
-                
-                new Client()
+                new Client
                 {
-                    ClientId          = "web.apigateway",
-                    ClientSecrets     = {new Secret("Y2F0Y2hlciUyMHdvbmclMjBsb3ZlJTIwLm5ldA".Sha256())},
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
-                    AllowedScopes     = { "web.apigateway"}
+                    ClientId = "ndev",
+                    ClientSecrets = {new Secret("secret".Sha256())},
+
+                    AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
+
+                    // where to redirect to after login
+                    RedirectUris = {"https://localhost:5002/signin-oidc"},
+
+                    // where to redirect to after logout
+                    PostLogoutRedirectUris = {"https://localhost:5002/signout-callback-oidc"},
+
+                    AllowedScopes = new List<string>
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile,
+                        "api1",
+                        "apiNDEV"
+                    }
                 }
             };
     }
