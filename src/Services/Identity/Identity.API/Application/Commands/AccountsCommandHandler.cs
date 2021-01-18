@@ -19,6 +19,8 @@ namespace Identity.API.Application.Commands
     public class AccountsCommandHandler :
         IRequestHandler<RegisterCommand, bool>,
         IRequestHandler<LoginCommand, bool>,
+        IRequestHandler<TestCommand, bool>
+        IRequestHandler<LoginCommand, bool>,
         IRequestHandler<LogoutCommand, bool>
     {
         #region Fields
@@ -107,7 +109,7 @@ namespace Identity.API.Application.Commands
                         ClientId = "ndev01",
                         UserName = model.Email,
                         ClientSecret = "secret",
-                        Scope = "account",
+                        Scope = "TEST",
                         GrantType = "password",
                     }, cancellationToken: cancellationToken);
 
@@ -128,6 +130,10 @@ namespace Identity.API.Application.Commands
             return false;
         }
 
+        public async Task<bool> Handle(TestCommand message, CancellationToken cancellationToken)
+        {
+            return true;
+        }
         public async Task<bool> Handle(LogoutCommand request, CancellationToken cancellationToken)
         {
              await _signInManager.SignOutAsync();
@@ -137,5 +143,6 @@ namespace Identity.API.Application.Commands
         }
 
         #endregion
+        
     }
 }

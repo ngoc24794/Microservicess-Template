@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Identity.API.Application.Commands;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -62,6 +63,16 @@ namespace Identity.API.Controllers
         public async Task<ActionResult<bool>> AuAsync()
         {
             return Content("OK");
+        }
+        [Route("test")]
+        [Authorize]
+        [HttpPost]
+        [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<bool>> TestAsync([FromBody] TestCommand command)
+        {
+            return Ok(await _mediator.Send(command));
         }
         #endregion
     }
