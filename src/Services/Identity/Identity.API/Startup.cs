@@ -5,6 +5,7 @@ using Autofac;
 using HealthChecks.UI.Client;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
+using Identity.API.Extensions;
 using Identity.API.Infrastructures;
 using IdentityServer4.Configuration;
 using IdentityServer4.EntityFramework.DbContexts;
@@ -47,14 +48,13 @@ namespace Identity.API
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IEventBus eventBus, IMediator mediator)
         {
-            InitializeDatabase(app);
-
             if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
 
             app.UseDiscoveryClient();
 
             app.UseRouting();
 
+            app.UseIdentityServerConfiguration();
             app.UseIdentityServer();
             app.UseAuthorization();
 
@@ -194,42 +194,6 @@ namespace Identity.API
 
         #region InsertData to IDSV4 when running OneTime
         
-        private void InitializeDatabase(IApplicationBuilder app)
-        {
-            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
-            {
-                serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-
-                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-                context.Database.Migrate();
-                if (!context.Clients.Any())
-                {
-                    foreach (var client in Config.Clients)
-                    {
-                        context.Clients.Add(client.ToEntity());
-                    }
-                    context.SaveChanges();
-                }
-
-                if (!context.IdentityResources.Any())
-                {
-                    foreach (var resource in Config.IdentityResources)
-                    {
-                        context.IdentityResources.Add(resource.ToEntity());
-                    }
-                    context.SaveChanges();
-                }
-
-                if (!context.ApiScopes.Any())
-                {
-                    foreach (var resource in Config.ApiScopes)
-                    {
-                        context.ApiScopes.Add(resource.ToEntity());
-                    }
-                    context.SaveChanges();
-                }
-            }
-        }
 
         #endregion
     }
