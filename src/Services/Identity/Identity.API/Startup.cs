@@ -57,6 +57,7 @@ namespace Identity.API
             app.UseRouting();
 
             app.UseIdentityServer();
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
