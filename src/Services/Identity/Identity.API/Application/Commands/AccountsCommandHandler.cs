@@ -19,8 +19,7 @@ namespace Identity.API.Application.Commands
     public class AccountsCommandHandler :
         IRequestHandler<RegisterCommand, bool>,
         IRequestHandler<LoginCommand, bool>,
-        IRequestHandler<TestCommand, bool>
-        IRequestHandler<LoginCommand, bool>,
+        IRequestHandler<TestCommand, bool>,
         IRequestHandler<LogoutCommand, bool>
     {
         #region Fields
