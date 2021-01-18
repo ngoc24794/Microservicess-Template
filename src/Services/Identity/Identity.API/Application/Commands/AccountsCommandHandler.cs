@@ -16,7 +16,8 @@ namespace Identity.API.Application.Commands
 {
     public class AccountsCommandHandler :
         IRequestHandler<RegisterCommand, bool>,
-        IRequestHandler<LoginCommand, bool>
+        IRequestHandler<LoginCommand, bool>,
+        IRequestHandler<TestCommand, bool>
     {
         #region Fields
 
@@ -98,7 +99,7 @@ namespace Identity.API.Application.Commands
                         ClientId = "ndev01",
                         UserName = model.Email,
                         ClientSecret = "secret",
-                        Scope = "apiNDEVpp",
+                        Scope = "TEST",
                         GrantType = "password",
                     });
                     return true;
@@ -111,7 +112,11 @@ namespace Identity.API.Application.Commands
             return false;
         }
 
+        public async Task<bool> Handle(TestCommand message, CancellationToken cancellationToken)
+        {
+            return true;
+        }
         #endregion
-        
+
     }
 }
