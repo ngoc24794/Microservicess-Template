@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using Autofac;
+using FluentValidation.AspNetCore;
 using HealthChecks.UI.Client;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
@@ -22,19 +23,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Steeltoe.Discovery.Client;
-using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace Identity.API
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _env;
-
         #region Constructors
 
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration)
         {
-            _env = env;
             Configuration = configuration;
         }
 
@@ -60,7 +57,6 @@ namespace Identity.API
             app.UseRouting();
 
             app.UseIdentityServer();
-            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -120,7 +116,7 @@ namespace Identity.API
             });
 
             // Api Controllers
-            services.AddControllers().AddNewtonsoftJson();
+            services.AddControllers().AddNewtonsoftJson().AddFluentValidation();
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
@@ -140,7 +136,7 @@ namespace Identity.API
             //Khai báo chuỗi kết nối
             var connectionString = Configuration["ConnectionString"];
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
-            var builder = services.AddIdentityServer(options =>
+            services.AddIdentityServer(options =>
                 {
                     options.Events.RaiseErrorEvents = true;
                     options.Events.RaiseInformationEvents = true;
@@ -167,74 +163,51 @@ namespace Identity.API
                 })
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddDeveloperSigningCredential();
-
-            /*if (Environment.IsDevelopment())
-            {
-                builder.AddDeveloperSigningCredential();
-            }
-            else
-            {
-                throw new Exception("need to configure key material");
-            }*/
-            // Adds IdentityServer
-            /*var builder = services.AddIdentityServer()
-                /*.AddTestUsers(TestUsers.Users)#1#
-                .AddAspNetIdentity<ApplicationUser>()
-                 .AddDeveloperSigningCredential()
-                .AddConfigurationStore(options =>
-                {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
-                })
-                .AddOperationalStore(options =>
-                {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
-                });*/
-
-            /*builder.AddDeveloperSigningCredential();*/
         }
-
+        
         #endregion
 
         #region InsertData to IDSV4 when running OneTime
-
+        
         private void InitializeDatabase(IApplicationBuilder app)
         {
-            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>()?.CreateScope())
             {
-                serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-
-                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-                context.Database.Migrate();
-                if (!context.Clients.Any())
+                if (serviceScope != null)
                 {
-                    foreach (var client in Config.Clients)
+                    serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
+
+                    var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+                    context.Database.Migrate();
+                    if (!context.Clients.Any())
                     {
-                        context.Clients.Add(client.ToEntity());
+                        foreach (var client in Config.Clients)
+                        {
+                            context.Clients.Add(client.ToEntity());
+                        }
+
+                        context.SaveChanges();
                     }
 
-                    context.SaveChanges();
-                }
-
-                if (!context.IdentityResources.Any())
-                {
-                    foreach (var resource in Config.IdentityResources)
+                    if (!context.IdentityResources.Any())
                     {
-                        context.IdentityResources.Add(resource.ToEntity());
+                        foreach (var resource in Config.IdentityResources)
+                        {
+                            context.IdentityResources.Add(resource.ToEntity());
+                        }
+
+                        context.SaveChanges();
                     }
 
-                    context.SaveChanges();
-                }
-
-                if (!context.ApiScopes.Any())
-                {
-                    foreach (var resource in Config.ApiScopes)
+                    if (!context.ApiScopes.Any())
                     {
-                        context.ApiScopes.Add(resource.ToEntity());
-                    }
+                        foreach (var resource in Config.ApiScopes)
+                        {
+                            context.ApiScopes.Add(resource.ToEntity());
+                        }
 
-                    context.SaveChanges();
+                        context.SaveChanges();
+                    }
                 }
             }
         }

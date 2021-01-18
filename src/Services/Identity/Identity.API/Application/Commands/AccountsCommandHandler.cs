@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Identity.API.Application.Queries.Models;
+using IdentityModel;
 using IdentityModel.Client;
 using IdentityServer4;
 using MediatR;
@@ -82,14 +84,13 @@ namespace Identity.API.Application.Commands
                 _logger.LogInformation("----- Login GetToken");
 
                 var client = new HttpClient();
-                var disco = 
-                    await client.GetDiscoveryDocumentAsync("http://localhost:5000", cancellationToken: cancellationToken);
+                var disco = await client.GetDiscoveryDocumentAsync("http://localhost:5000", cancellationToken: cancellationToken);
                 if (disco.IsError)
                 {
                     _logger.LogWarning("IP Not found");
                 }
                 else
-                {
+                { 
                     var tokenReturn = await client.RequestPasswordTokenAsync(new PasswordTokenRequest
                     {
                         Address = disco.TokenEndpoint,
@@ -98,9 +99,8 @@ namespace Identity.API.Application.Commands
                         UserName = model.Email,
                         ClientSecret = "secret",
                         Scope = "apiNDEVpp",
-                        GrantType = "password"
+                        GrantType = "password",
                     }, cancellationToken: cancellationToken);
-                    
                     return true;
                 }
                 _logger.LogInformation("----- Login successfull");
