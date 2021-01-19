@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -18,6 +19,7 @@ namespace Identity.API.Application.Commands
     public class AccountsCommandHandler :
         IRequestHandler<RegisterCommand, bool>,
         IRequestHandler<LoginCommand, bool>,
+        IRequestHandler<TestCommand, bool>,
         IRequestHandler<LogoutCommand, bool>
     {
         #region Fields
@@ -28,6 +30,7 @@ namespace Identity.API.Application.Commands
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IdentityServerTools _identityServerTools;
         private readonly IHttpContextAccessor _httpContextAccessor;
+
         #endregion
 
         #region Constructors
@@ -36,7 +39,8 @@ namespace Identity.API.Application.Commands
             UserManager<ApplicationUser> userManager,
             ILogger<AccountsCommandHandler> logger,
             SignInManager<ApplicationUser> signInManager,
-            IdentityServerTools identityServerTools, IHttpContextAccessor httpContextAccessor)
+            IdentityServerTools identityServerTools,
+            IHttpContextAccessor httpContextAccessor)
         {
             _integrationEventService = integrationEventService ??
                                        throw new ArgumentNullException(nameof(integrationEventService));
@@ -48,7 +52,7 @@ namespace Identity.API.Application.Commands
         }
 
         #endregion
-        
+
         #region IRequestHandler<RegisterCommand,bool> Members
 
         public async Task<bool> Handle(RegisterCommand message, CancellationToken cancellationToken)
@@ -87,23 +91,28 @@ namespace Identity.API.Application.Commands
                 _logger.LogInformation("----- Login GetToken");
 
                 var client = new HttpClient();
-                var disco = await client.GetDiscoveryDocumentAsync("http://localhost:5000");
+                var disco =
+                    await client.GetDiscoveryDocumentAsync("http://localhost:5000",
+                        cancellationToken: cancellationToken);
                 if (disco.IsError)
                 {
-                    _logger.LogWarning("Không tìm thấy IP");
+                    _logger.LogWarning("IP Not found");
                 }
                 else
-                { 
+                {
+                    _logger.LogInformation("----- Login create accesstoken");
                     var tokenReturn = await client.RequestPasswordTokenAsync(new PasswordTokenRequest
                     {
                         Address = disco.TokenEndpoint,
-                        Password = model.Password, //.ToSha256(),
+                        Password = model.Password,
                         ClientId = "ndev01",
                         UserName = model.Email,
                         ClientSecret = "secret",
-                        Scope = "account",
+                        Scope = "TEST",
                         GrantType = "password",
-                    });
+                    }, cancellationToken: cancellationToken);
+
+                    _logger.LogInformation("----- Login create cookie (ckToken)");
                     CookieOptions option = new CookieOptions
                     {
                         Expires = DateTime.Now.AddHours(4)
@@ -111,6 +120,7 @@ namespace Identity.API.Application.Commands
                     _httpContextAccessor.HttpContext.Response.Cookies.Append("ckToken", tokenReturn.AccessToken, option);
                     return true;
                 }
+
                 _logger.LogInformation("----- Login successfull");
                 return true;
             }
@@ -119,6 +129,10 @@ namespace Identity.API.Application.Commands
             return false;
         }
 
+        public async Task<bool> Handle(TestCommand message, CancellationToken cancellationToken)
+        {
+            return true;
+        }
         public async Task<bool> Handle(LogoutCommand request, CancellationToken cancellationToken)
         {
              await _signInManager.SignOutAsync();
@@ -128,6 +142,6 @@ namespace Identity.API.Application.Commands
         }
 
         #endregion
-
+        
     }
 }

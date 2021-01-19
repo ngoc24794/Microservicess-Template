@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Autofac;
+using FluentValidation.AspNetCore;
 using HealthChecks.UI.Client;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
@@ -9,9 +12,11 @@ using Identity.API.Infrastructures;
 using IdentityServer4.Configuration;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
+using IdentityServer4.Services;
 using MediatR;
 using Microservices.Core.EventBus.Abstractions;
 using Microservices.Core.Extensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
@@ -21,6 +26,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using Steeltoe.Discovery.Client;
 
 namespace Identity.API
@@ -58,12 +64,13 @@ namespace Identity.API
             app.UseIdentityServer();
             app.UseAuthentication();
             app.UseAuthorization();
-
+            
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapDefaultControllerRoute();
                 endpoints.MapHealthChecks("/health", new HealthCheckOptions
                 {
-                    Predicate      = _ => true,
+                    Predicate = _ => true,
                     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
                 });
                 endpoints.MapControllers();
@@ -104,7 +111,35 @@ namespace Identity.API
             services.AddIntegrationEventLogService();
 
             // Swagger
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "My API",
+                    Version = "v1"
+                });
+                options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using token",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    BearerFormat = "JWT"
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement() {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Id = "Bearer", //The name of the previously defined security scheme.
+                                Type = ReferenceType.SecurityScheme
+                            }
+                        }, new List<string>()
+                    }
+                });
+            });
 
             // Cross-origin resource sharing
             services.AddCors(options =>
@@ -116,27 +151,64 @@ namespace Identity.API
             });
 
             // Api Controllers
-            services.AddControllers().AddNewtonsoftJson();
+            services.AddControllers().AddNewtonsoftJson().AddFluentValidation();
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
+            
+            //Khai báo cookie
+            services.AddHttpContextAccessor();
 
             //Cấu hình server để chạy Identity
             /*services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();*/
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-                {
-                    options.SignIn.RequireConfirmedAccount = true;
-                    options.SignIn.RequireConfirmedEmail = true;
-                })
+            {
+                options.SignIn.RequireConfirmedAccount = true;
+                options.SignIn.RequireConfirmedEmail = true;
+            })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    // base-address of your identityserver
+                    options.Authority = "http://localhost:5000";
+
+                    // if you are using API resources, you can specify the name here
+                    //options.Audience = "resource1";
+                    options.TokenValidationParameters.ValidateAudience = false;
+
+                    // IdentityServer emits a typ header by default, recommended extra check
+                    options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
+                });
+
+            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            //    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            //    {
+            //        options.RequireHttpsMetadata = false;
+            //        options.Authority = "http://localhost:5000";
+            //        //options.Audience = authCfg.Audience;
+            //        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+            //        {
+            //            ValidateIssuer = false,
+
+            //            // Clock skew compensates for server time drift.
+            //            // We recommend 5 minutes or less:
+            //            ClockSkew = TimeSpan.FromMinutes(5),
+
+            //            // Ensure the token hasn't expired:
+            //            RequireExpirationTime = true,
+            //            ValidateLifetime = true
+            //        };
+            //    });
 
             //Cấu hình IndentityServer4
             //Khai báo chuỗi kết nối
             var connectionString = Configuration["ConnectionString"];
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
-            var builder = services.AddIdentityServer(options =>
+            services.AddIdentityServer(options =>
                 {
                     options.Events.RaiseErrorEvents = true;
                     options.Events.RaiseInformationEvents = true;
@@ -152,8 +224,8 @@ namespace Identity.API
                 })
                 .AddConfigurationStore(options =>
                 {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
+                    options.ConfigureDbContext = b =>
+                        b.UseSqlServer(connectionString, sql => sql.MigrationsAssembly(migrationsAssembly));
                 })
                 .AddOperationalStore(options =>
                 {
@@ -163,73 +235,51 @@ namespace Identity.API
                 })
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddDeveloperSigningCredential();
-
-            /*if (Environment.IsDevelopment())
-            {
-                builder.AddDeveloperSigningCredential();
-            }
-            else
-            {
-                throw new Exception("need to configure key material");
-            }*/
-            // Adds IdentityServer
-            /*var builder = services.AddIdentityServer()
-                /*.AddTestUsers(TestUsers.Users)#1#
-                .AddAspNetIdentity<ApplicationUser>()
-                 .AddDeveloperSigningCredential()
-                .AddConfigurationStore(options =>
-                {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
-                })
-                .AddOperationalStore(options =>
-                {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
-                });*/
-
-            /*builder.AddDeveloperSigningCredential();*/
-            services.AddAuthentication();
-            services.AddAuthorization();
         }
-        
+
         #endregion
 
         #region InsertData to IDSV4 when running OneTime
-        
+
         private void InitializeDatabase(IApplicationBuilder app)
         {
-            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>()?.CreateScope())
             {
-                serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
-
-                var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-                context.Database.Migrate();
-                if (!context.Clients.Any())
+                if (serviceScope != null)
                 {
-                    foreach (var client in Config.Clients)
-                    {
-                        context.Clients.Add(client.ToEntity());
-                    }
-                    context.SaveChanges();
-                }
+                    serviceScope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>().Database.Migrate();
 
-                if (!context.IdentityResources.Any())
-                {
-                    foreach (var resource in Config.IdentityResources)
+                    var context = serviceScope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+                    context.Database.Migrate();
+                    if (!context.Clients.Any())
                     {
-                        context.IdentityResources.Add(resource.ToEntity());
-                    }
-                    context.SaveChanges();
-                }
+                        foreach (var client in Config.Clients)
+                        {
+                            context.Clients.Add(client.ToEntity());
+                        }
 
-                if (!context.ApiScopes.Any())
-                {
-                    foreach (var resource in Config.ApiScopes)
-                    {
-                        context.ApiScopes.Add(resource.ToEntity());
+                        context.SaveChanges();
                     }
-                    context.SaveChanges();
+
+                    if (!context.IdentityResources.Any())
+                    {
+                        foreach (var resource in Config.IdentityResources)
+                        {
+                            context.IdentityResources.Add(resource.ToEntity());
+                        }
+
+                        context.SaveChanges();
+                    }
+
+                    if (!context.ApiScopes.Any())
+                    {
+                        foreach (var resource in Config.ApiScopes)
+                        {
+                            context.ApiScopes.Add(resource.ToEntity());
+                        }
+
+                        context.SaveChanges();
+                    }
                 }
             }
         }
