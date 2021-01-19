@@ -106,7 +106,7 @@ namespace Identity.API.Application.Commands
                         ClientId = "ndev01",
                         UserName = model.Email,
                         ClientSecret = "secret",
-                        Scope = "apiNDEVpp",
+                        Scope = "TEST",
                         GrantType = "password",
                     }, cancellationToken: cancellationToken);
 

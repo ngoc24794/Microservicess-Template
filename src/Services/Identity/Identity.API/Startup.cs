@@ -7,12 +7,14 @@ using HealthChecks.UI.Client;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
 using Identity.API.Infrastructures;
+using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
 using MediatR;
 using Microservices.Core.EventBus.Abstractions;
 using Microservices.Core.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
@@ -125,8 +127,6 @@ namespace Identity.API
             services.AddHttpContextAccessor();
 
             //Cấu hình server để chạy Identity
-            /*services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();*/
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
                 {
                     options.SignIn.RequireConfirmedAccount = true;
@@ -166,6 +166,13 @@ namespace Identity.API
                 })
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddDeveloperSigningCredential();
+
+            services.AddAuthorization(auth =>
+            {
+                auth.AddPolicy("Bearer", new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(IdentityServerAuthenticationDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser().Build());
+            });
         }
         
         #endregion
