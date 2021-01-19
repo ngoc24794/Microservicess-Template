@@ -19,7 +19,8 @@ namespace Identity.API.Application.Commands
     public class AccountsCommandHandler :
         IRequestHandler<RegisterCommand, bool>,
         IRequestHandler<LoginCommand, bool>,
-        IRequestHandler<TestCommand, bool>
+        IRequestHandler<TestCommand, bool>,
+        IRequestHandler<LogoutCommand, bool>
     {
         #region Fields
 
@@ -132,6 +133,14 @@ namespace Identity.API.Application.Commands
         {
             return true;
         }
+        public async Task<bool> Handle(LogoutCommand request, CancellationToken cancellationToken)
+        {
+             await _signInManager.SignOutAsync();
+            _logger.LogInformation("User logged out.");
+             //đang update phần return url
+            return true; 
+        }
+
         #endregion
         
     }

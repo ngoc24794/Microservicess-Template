@@ -48,6 +48,22 @@ namespace Identity.API.Controllers
             return Ok(await _mediator.Send(command));
         }
 
+        [Route("logout")]
+        [HttpPost]
+        [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<bool>> LogoutAsync([FromBody] LogoutCommand command)
+        {
+            return Ok(await _mediator.Send(command));
+        }
+
+        [Route("au")]
+        [HttpGet]
+        [Authorize]
+        [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<bool>> AuAsync()
+        {
+            return Content("OK");
+        }
         [Route("test")]
         [Authorize]
         [HttpPost]
