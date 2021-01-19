@@ -11,6 +11,7 @@ namespace Basket.API.Controllers
 
         // GET
         [HttpGet]
+        [Authorize]
         // [Authorize(Policy = "Api1Policy")]
         public IActionResult Get()
         {

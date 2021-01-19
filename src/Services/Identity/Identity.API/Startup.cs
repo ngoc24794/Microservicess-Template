@@ -26,6 +26,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Steeltoe.Discovery.Client;
 
@@ -169,40 +170,16 @@ namespace Identity.API
             })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
-
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
+            services.AddAuthentication("Bearer")
+                .AddJwtBearer("Bearer", options =>
                 {
-                    // base-address of your identityserver
-                    options.Authority = "http://localhost:5000";
-
-                    // if you are using API resources, you can specify the name here
-                    //options.Audience = "resource1";
-                    options.TokenValidationParameters.ValidateAudience = false;
-
-                    // IdentityServer emits a typ header by default, recommended extra check
-                    options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
+                    options.Authority = Configuration["Identity:Authority"];
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateAudience = false
+                    };
+                    options.RequireHttpsMetadata = false;
                 });
-
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            //    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-            //    {
-            //        options.RequireHttpsMetadata = false;
-            //        options.Authority = "http://localhost:5000";
-            //        //options.Audience = authCfg.Audience;
-            //        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
-            //        {
-            //            ValidateIssuer = false,
-
-            //            // Clock skew compensates for server time drift.
-            //            // We recommend 5 minutes or less:
-            //            ClockSkew = TimeSpan.FromMinutes(5),
-
-            //            // Ensure the token hasn't expired:
-            //            RequireExpirationTime = true,
-            //            ValidateLifetime = true
-            //        };
-            //    });
 
             //Cấu hình IndentityServer4
             //Khai báo chuỗi kết nối
