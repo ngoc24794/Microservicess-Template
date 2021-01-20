@@ -1,54 +1,52 @@
 ﻿using System;
-using System.Net;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Identity.API.Application.Queries.Models;
-using IdentityModel;
 using IdentityModel.Client;
-using IdentityServer4;
 using MediatR;
-using Microservices.Core.Domain.IntegrationEventLogs;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
 
 namespace Identity.API.Application.Commands
 {
     public class AccountsCommandHandler :
         IRequestHandler<RegisterCommand, bool>,
+        IRequestHandler<RegisterFromExcelCommand, bool>,
         IRequestHandler<LoginCommand, bool>,
-        IRequestHandler<TestCommand, bool>,
         IRequestHandler<LogoutCommand, bool>
     {
         #region Fields
 
-        private readonly IIntegrationEventService _integrationEventService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<AccountsCommandHandler> _logger;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly IdentityServerTools _identityServerTools;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IHostingEnvironment _hostingEnvironment;
 
         #endregion
 
         #region Constructors
 
-        public AccountsCommandHandler(IIntegrationEventService integrationEventService,
+        public AccountsCommandHandler(
             UserManager<ApplicationUser> userManager,
             ILogger<AccountsCommandHandler> logger,
             SignInManager<ApplicationUser> signInManager,
-            IdentityServerTools identityServerTools,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IHostingEnvironment hostingEnvironment)
         {
-            _integrationEventService = integrationEventService ??
-                                       throw new ArgumentNullException(nameof(integrationEventService));
             _userManager = userManager;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _signInManager = signInManager;
-            _identityServerTools = identityServerTools;
             _httpContextAccessor = httpContextAccessor;
+            _hostingEnvironment = hostingEnvironment;
         }
 
         #endregion
@@ -71,6 +69,44 @@ namespace Identity.API.Application.Commands
                 _logger.LogInformation("User created a new account with password");
                 return true;
             }
+
+            _logger.LogInformation("--- Register UnSuccessfull");
+            return false;
+        }
+
+        #endregion
+
+        #region IRequestHandler<RegisterFromExcelCommand,bool> Members
+
+        public async Task<bool> Handle(RegisterFromExcelCommand message, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("----- Start require excel file");
+            /*string path = _hostingEnvironment.MapPath("~/Resources/register_template.xlsx");*/
+            /*string webRootPath = _hostingEnvironment.WebRootPath;
+            string path = "D:\\Tri_Viet\\src\\Services\\Identity\\Identity.API\\Resources\\register_template.xlsx";*/
+                //Path.Combine(webRootPath + "/Identity.API/Resources/register_template.xlsx");
+
+            /*FileInfo fileInfo = new FileInfo(path);
+
+            ExcelPackage package = new ExcelPackage(fileInfo);
+            ExcelWorksheet worksheet = package.Workbook.Worksheets.FirstOrDefault();
+
+// get number of rows and columns in the sheet
+            if (worksheet != null)
+            {
+                int rows = worksheet.Dimension.Rows; // 20
+                int columns = worksheet.Dimension.Columns; // 7
+
+// loop through the worksheet rows and columns
+                for (int i = 1; i <= rows; i++)
+                {
+                    for (int j = 1; j <= columns; j++)
+                    {
+                        string content = worksheet.Cells[i, j].Value.ToString();
+                        /* Do something ...#1#
+                    }
+                }
+            }*/
 
             _logger.LogInformation("--- Register UnSuccessfull");
             return false;
@@ -117,7 +153,9 @@ namespace Identity.API.Application.Commands
                     {
                         Expires = DateTime.Now.AddHours(4)
                     };
-                    _httpContextAccessor.HttpContext.Response.Cookies.Append("ckToken", tokenReturn.AccessToken, option);
+                    _httpContextAccessor.HttpContext.Response.Cookies.Append("ckToken", tokenReturn.AccessToken,
+                        option);
+
                     return true;
                 }
 
@@ -129,19 +167,14 @@ namespace Identity.API.Application.Commands
             return false;
         }
 
-        public async Task<bool> Handle(TestCommand message, CancellationToken cancellationToken)
-        {
-            return true;
-        }
         public async Task<bool> Handle(LogoutCommand request, CancellationToken cancellationToken)
         {
-             await _signInManager.SignOutAsync();
+            await _signInManager.SignOutAsync();
             _logger.LogInformation("User logged out.");
-             //đang update phần return url
-            return true; 
+            //đang update phần return url
+            return true;
         }
 
         #endregion
-        
     }
 }
