@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Autofac;
+using FluentValidation.AspNetCore;
 using HealthChecks.UI.Client;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
@@ -10,9 +13,11 @@ using Identity.API.Infrastructures;
 using IdentityServer4.Configuration;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
+using IdentityServer4.Services;
 using MediatR;
 using Microservices.Core.EventBus.Abstractions;
 using Microservices.Core.Extensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
@@ -22,6 +27,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Steeltoe.Discovery.Client;
 
 namespace Identity.API
@@ -48,6 +55,8 @@ namespace Identity.API
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IEventBus eventBus, IMediator mediator)
         {
+            InitializeDatabase(app);
+
             if (env.IsDevelopment()) app.UseDeveloperExceptionPage();
 
             app.UseDiscoveryClient();
@@ -57,12 +66,13 @@ namespace Identity.API
             app.UseIdentityServerConfiguration();
             app.UseIdentityServer();
             app.UseAuthorization();
-
+            
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapDefaultControllerRoute();
                 endpoints.MapHealthChecks("/health", new HealthCheckOptions
                 {
-                    Predicate      = _ => true,
+                    Predicate = _ => true,
                     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
                 });
                 endpoints.MapControllers();
@@ -103,7 +113,35 @@ namespace Identity.API
             services.AddIntegrationEventLogService();
 
             // Swagger
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "My API",
+                    Version = "v1"
+                });
+                options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using token",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    BearerFormat = "JWT"
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement() {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Id = "Bearer", //The name of the previously defined security scheme.
+                                Type = ReferenceType.SecurityScheme
+                            }
+                        }, new List<string>()
+                    }
+                });
+            });
 
             // Cross-origin resource sharing
             services.AddCors(options =>
@@ -115,27 +153,40 @@ namespace Identity.API
             });
 
             // Api Controllers
-            services.AddControllers().AddNewtonsoftJson();
+            services.AddControllers().AddNewtonsoftJson().AddFluentValidation();
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
+            
+            //Khai báo cookie
+            services.AddHttpContextAccessor();
 
             //Cấu hình server để chạy Identity
             /*services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();*/
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-                {
-                    options.SignIn.RequireConfirmedAccount = true;
-                    options.SignIn.RequireConfirmedEmail = true;
-                })
+            {
+                options.SignIn.RequireConfirmedAccount = true;
+                options.SignIn.RequireConfirmedEmail = true;
+            })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+            services.AddAuthentication("Bearer")
+                .AddJwtBearer("Bearer", options =>
+                {
+                    options.Authority = Configuration["Identity:Authority"];
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateAudience = false
+                    };
+                    options.RequireHttpsMetadata = false;
+                });
 
             //Cấu hình IndentityServer4
             //Khai báo chuỗi kết nối
             var connectionString = Configuration["ConnectionString"];
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
-            var builder = services.AddIdentityServer(options =>
+            services.AddIdentityServer(options =>
                 {
                     options.Events.RaiseErrorEvents = true;
                     options.Events.RaiseInformationEvents = true;
@@ -151,8 +202,8 @@ namespace Identity.API
                 })
                 .AddConfigurationStore(options =>
                 {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
+                    options.ConfigureDbContext = b =>
+                        b.UseSqlServer(connectionString, sql => sql.MigrationsAssembly(migrationsAssembly));
                 })
                 .AddOperationalStore(options =>
                 {
@@ -162,34 +213,8 @@ namespace Identity.API
                 })
                 .AddAspNetIdentity<ApplicationUser>()
                 .AddDeveloperSigningCredential();
-
-            /*if (Environment.IsDevelopment())
-            {
-                builder.AddDeveloperSigningCredential();
-            }
-            else
-            {
-                throw new Exception("need to configure key material");
-            }*/
-            // Adds IdentityServer
-            /*var builder = services.AddIdentityServer()
-                /*.AddTestUsers(TestUsers.Users)#1#
-                .AddAspNetIdentity<ApplicationUser>()
-                 .AddDeveloperSigningCredential()
-                .AddConfigurationStore(options =>
-                {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
-                })
-                .AddOperationalStore(options =>
-                {
-                    options.ConfigureDbContext = b => b.UseSqlServer(connectionString,
-                        sql => sql.MigrationsAssembly(migrationsAssembly));
-                });*/
-
-            /*builder.AddDeveloperSigningCredential();*/
         }
-        
+
         #endregion
 
         #region InsertData to IDSV4 when running OneTime
