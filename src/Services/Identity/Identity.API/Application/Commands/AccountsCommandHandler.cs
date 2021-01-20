@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Identity.API.Application.Queries.Models;
+using Identity.API.Infrastructures.Models.ExcelRegisterUserModel;
+using Identity.API.Infrastructures.Services;
 using IdentityModel;
 using IdentityModel.Client;
 using IdentityServer4;
@@ -20,7 +23,8 @@ namespace Identity.API.Application.Commands
         IRequestHandler<RegisterCommand, bool>,
         IRequestHandler<LoginCommand, bool>,
         IRequestHandler<TestCommand, bool>,
-        IRequestHandler<LogoutCommand, bool>
+        IRequestHandler<LogoutCommand, bool>,
+        IRequestHandler<RegisterListUsersCommand, List<ExcelRegisterUserModel>>
     {
         #region Fields
 
@@ -30,6 +34,7 @@ namespace Identity.API.Application.Commands
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IdentityServerTools _identityServerTools;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IExcelRegisterUserService _excelRegisterUserService;
 
         #endregion
 
@@ -40,7 +45,8 @@ namespace Identity.API.Application.Commands
             ILogger<AccountsCommandHandler> logger,
             SignInManager<ApplicationUser> signInManager,
             IdentityServerTools identityServerTools,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IExcelRegisterUserService excelRegisterUserService)
         {
             _integrationEventService = integrationEventService ??
                                        throw new ArgumentNullException(nameof(integrationEventService));
@@ -49,6 +55,7 @@ namespace Identity.API.Application.Commands
             _signInManager = signInManager;
             _identityServerTools = identityServerTools;
             _httpContextAccessor = httpContextAccessor;
+            _excelRegisterUserService = excelRegisterUserService;
         }
 
         #endregion
@@ -141,7 +148,11 @@ namespace Identity.API.Application.Commands
             return true; 
         }
 
+        public async Task<List<ExcelRegisterUserModel>> Handle(RegisterListUsersCommand message, CancellationToken cancellationToken)
+        {
+            return await _excelRegisterUserService.RegisterListUsersFromExcel(message.Users);
+        }
         #endregion
-        
+
     }
 }

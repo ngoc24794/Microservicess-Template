@@ -9,6 +9,7 @@ using HealthChecks.UI.Client;
 using Identity.API.Application.Queries.Models;
 using Identity.API.Configuration;
 using Identity.API.Infrastructures;
+using Identity.API.Infrastructures.Services;
 using IdentityServer4.Configuration;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
@@ -153,6 +154,9 @@ namespace Identity.API
 
             // Api Controllers
             services.AddControllers().AddNewtonsoftJson().AddFluentValidation();
+
+            // Services
+            services.AddTransient<IExcelRegisterUserService, ExcelRegisterUserService>();
 
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy());
