@@ -48,6 +48,14 @@ namespace Identity.API.Controllers
             return Ok(await _mediator.Send(command));
         }
 
+        [Route("register_excel")]
+        [HttpPost]
+        [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<bool>> RegisterExcelAsync([FromBody] RegisterExcelCommand command)
+        {
+            return Ok(await _mediator.Send(command));
+        }
+
         [Route("logout")]
         [HttpPost]
         [ProducesResponseType(typeof(int), (int)HttpStatusCode.OK)]

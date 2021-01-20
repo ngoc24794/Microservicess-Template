@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -13,6 +15,7 @@ using Microservices.Core.Domain.IntegrationEventLogs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
 
 namespace Identity.API.Application.Commands
 {
@@ -20,7 +23,8 @@ namespace Identity.API.Application.Commands
         IRequestHandler<RegisterCommand, bool>,
         IRequestHandler<LoginCommand, bool>,
         IRequestHandler<TestCommand, bool>,
-        IRequestHandler<LogoutCommand, bool>
+        IRequestHandler<LogoutCommand, bool>,
+        IRequestHandler<RegisterExcelCommand, bool>
     {
         #region Fields
 
@@ -141,7 +145,51 @@ namespace Identity.API.Application.Commands
             return true; 
         }
 
+        public async Task<bool> Handle(RegisterExcelCommand request, CancellationToken cancellationToken)
+        {
+            using (var stream = new MemoryStream())
+            {
+                await request.formFile.CopyToAsync(stream);
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                using (var package = new ExcelPackage(stream))
+                {
+                    ExcelWorksheet worksheet = package.Workbook.Worksheets.FirstOrDefault();
+                    var rows = worksheet.Dimension.Rows;
+                    int columns = worksheet.Dimension.Columns;
+                    ApplicationUser applicationUser;
+                    string userName; string password; string email;
+                    for (int i = 1; i <= rows; i++)
+                    {
+                        for (int j = 1; j <= columns; j++)
+                        {
+                            userName = worksheet.Cells[rows, 1].Value.ToString();
+                            email = worksheet.Cells[rows, 1].Value.ToString();
+                            password = worksheet.Cells[rows, 2].Value.ToString();
+                            applicationUser = new ApplicationUser
+                            {
+                                UserName = userName,
+                                Email = email,
+                                EmailConfirmed = false,
+                            };
+                            var rs = await _userManager.CreateAsync(applicationUser, password);
+                            if (rs.Succeeded)
+                            {
+                                _logger.LogInformation("User created a new account with password");
+
+                            }
+                            else
+                            {
+                                _logger.LogInformation("--- Register UnSuccessfull");
+                            }
+                        }
+                    }
+
+                }
+            }        
+            return true;
+        }
+
         #endregion
-        
+
     }
 }
